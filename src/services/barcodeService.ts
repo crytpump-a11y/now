@@ -1,3 +1,4 @@
+import { supabase } from '../lib/supabase';
 import { Html5QrcodeScanner } from 'html5-qrcode';
 
 export interface MedicineInfo {
@@ -46,8 +47,26 @@ export class BarcodeService {
   }
 
   async getMedicineInfo(barcode: string): Promise<MedicineInfo | null> {
-    // Use mock database for now - external APIs require server-side implementation
-    return this.getMockMedicineInfo(barcode);
+    try {
+      // Call the Edge Function to get medicine info securely
+      const { data, error } = await supabase.functions.invoke('get-medicine-info', {
+        body: { barcode }
+      });
+      
+      if (!error && data?.success) {
+        return data.data;
+      } else if (data?.message === 'Medicine not found') {
+        return null;
+      } else {
+        console.error('Medicine info error:', error);
+        // Fallback to mock data if Edge Function fails
+        return this.getMockMedicineInfo(barcode);
+      }
+    } catch (error) {
+      console.error('Error getting medicine info:', error);
+      // Fallback to mock data
+      return this.getMockMedicineInfo(barcode);
+    }
   }
 
   private extractManufacturer(text: string): string | undefined {
@@ -89,6 +108,36 @@ export class BarcodeService {
         barcode: '8699546334457',
         manufacturer: 'Novartis',
         activeIngredient: 'Diklofenak'
+      },
+      '8699546334458': {
+        name: 'Nurofen 400mg',
+        barcode: '8699546334458',
+        manufacturer: 'Reckitt Benckiser',
+        activeIngredient: 'İbuprofen'
+      },
+      '8699546334459': {
+        name: 'Augmentin 1000mg',
+        barcode: '8699546334459',
+        manufacturer: 'GlaxoSmithKline',
+        activeIngredient: 'Amoksisilin + Klavulanik Asit'
+      },
+      '8699546334460': {
+        name: 'Cipro 500mg',
+        barcode: '8699546334460',
+        manufacturer: 'Bayer',
+        activeIngredient: 'Siprofloksasin'
+      },
+      '8699546334461': {
+        name: 'Concor 5mg',
+        barcode: '8699546334461',
+        manufacturer: 'Merck',
+        activeIngredient: 'Bisoprolol'
+      },
+      '8699546334462': {
+        name: 'Glucophage 850mg',
+        barcode: '8699546334462',
+        manufacturer: 'Merck',
+        activeIngredient: 'Metformin'
       }
     };
 

@@ -98,24 +98,17 @@ const Admin: React.FC = () => {
 
     if (window.confirm('Bu kullanıcıyı silmek istediğinizden emin misiniz?')) {
       try {
-        // Delete user from auth and database
-        const { error: authError } = await supabase.auth.admin.deleteUser(userId);
+        // Call the Edge Function to delete user securely
+        const { data, error } = await supabase.functions.invoke('delete-user', {
+          body: { userId }
+        });
         
-        if (authError) {
-          console.error('Auth deletion error:', authError);
-          // Continue with database deletion even if auth deletion fails
-        }
-        
-        const { error } = await supabase
-          .from('users')
-          .delete()
-          .eq('id', userId);
-        
-        if (!error) {
+        if (!error && data?.success) {
           setUsers(prev => prev.filter(u => u.id !== userId));
           toast.success('Kullanıcı başarıyla silindi');
         } else {
-          toast.error('Kullanıcı silinirken hata oluştu');
+          console.error('User deletion error:', error);
+          toast.error('Kullanıcı silinirken hata oluştu: ' + (error?.message || 'Bilinmeyen hata'));
         }
       } catch (error) {
         console.error('Error deleting user:', error);
