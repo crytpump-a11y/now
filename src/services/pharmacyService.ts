@@ -1,33 +1,181 @@
 import { Pharmacy } from '../types';
 
+const RAPIDAPI_KEY = '6d5f2b0502msh3e712505ac4bbf1p1ab9dajsna6e11f8b7d4e';
+const RAPIDAPI_HOST = 'nobetci-eczaneler-api-turkiye.p.rapidapi.com';
+
 export const pharmacyService = {
   async getPharmaciesByCity(city: string): Promise<Pharmacy[]> {
-    // Use mock data directly to avoid network errors
-    return this.getMockPharmacies(city);
+    try {
+      const response = await fetch(`https://${RAPIDAPI_HOST}/api/pharmacies/city/${encodeURIComponent(city)}`, {
+        method: 'GET',
+        headers: {
+          'X-RapidAPI-Key': RAPIDAPI_KEY,
+          'X-RapidAPI-Host': RAPIDAPI_HOST,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const data = await response.json();
+      
+      // API yanıtını Pharmacy tipine dönüştür
+      return this.transformApiResponse(data, city);
+    } catch (error) {
+      console.error('Error fetching pharmacies by city:', error);
+      // Hata durumunda mock veri döndür
+      return this.getMockPharmacies(city);
+    }
   },
 
   async getPharmaciesByDistrict(city: string, district: string): Promise<Pharmacy[]> {
-    const cityPharmacies = await this.getPharmaciesByCity(city);
-    return cityPharmacies.filter(pharmacy => 
-      pharmacy.district.toLowerCase().includes(district.toLowerCase())
-    );
+    try {
+      const response = await fetch(`https://${RAPIDAPI_HOST}/api/pharmacies/district/${encodeURIComponent(city)}/${encodeURIComponent(district)}`, {
+        method: 'GET',
+        headers: {
+          'X-RapidAPI-Key': RAPIDAPI_KEY,
+          'X-RapidAPI-Host': RAPIDAPI_HOST,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const data = await response.json();
+      return this.transformApiResponse(data, city, district);
+    } catch (error) {
+      console.error('Error fetching pharmacies by district:', error);
+      // Hata durumunda şehir bazında arama yap ve ilçeye göre filtrele
+      const cityPharmacies = await this.getPharmaciesByCity(city);
+      return cityPharmacies.filter(pharmacy => 
+        pharmacy.district.toLowerCase().includes(district.toLowerCase())
+      );
+    }
   },
 
   async getNearbyPharmacies(latitude: number, longitude: number): Promise<Pharmacy[]> {
-    // Return pharmacies from major cities for location-based search
-    const cities = ['İstanbul', 'Ankara', 'İzmir', 'Bursa', 'Antalya'];
-    const allPharmacies = [];
-    
-    for (const city of cities) {
-      const cityPharmacies = this.getMockPharmacies(city);
-      allPharmacies.push(...cityPharmacies);
+    try {
+      const response = await fetch(`https://${RAPIDAPI_HOST}/api/pharmacies/nearby?lat=${latitude}&lng=${longitude}&radius=5`, {
+        method: 'GET',
+        headers: {
+          'X-RapidAPI-Key': RAPIDAPI_KEY,
+          'X-RapidAPI-Host': RAPIDAPI_HOST,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const data = await response.json();
+      return this.transformApiResponse(data);
+    } catch (error) {
+      console.error('Error fetching nearby pharmacies:', error);
+      // Hata durumunda büyük şehirlerden örnek veri döndür
+      const cities = ['İstanbul', 'Ankara', 'İzmir', 'Bursa', 'Antalya'];
+      const allPharmacies = [];
+      
+      for (const city of cities) {
+        const cityPharmacies = this.getMockPharmacies(city);
+        allPharmacies.push(...cityPharmacies);
+      }
+      
+      return allPharmacies.slice(0, 10);
     }
-    
-    return allPharmacies.slice(0, 10); // Return first 10 for nearby
   },
 
   async getCities(): Promise<string[]> {
-    // Return comprehensive list of Turkish cities
+    try {
+      const response = await fetch(`https://${RAPIDAPI_HOST}/api/cities`, {
+        method: 'GET',
+        headers: {
+          'X-RapidAPI-Key': RAPIDAPI_KEY,
+          'X-RapidAPI-Host': RAPIDAPI_HOST,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const data = await response.json();
+      
+      if (Array.isArray(data)) {
+        return data.map(city => typeof city === 'string' ? city : city.name || city.city);
+      }
+      
+      // Fallback to static list
+      return this.getStaticCities();
+    } catch (error) {
+      console.error('Error fetching cities:', error);
+      return this.getStaticCities();
+    }
+  },
+
+  async getDistricts(city: string): Promise<string[]> {
+    try {
+      const response = await fetch(`https://${RAPIDAPI_HOST}/api/districts/${encodeURIComponent(city)}`, {
+        method: 'GET',
+        headers: {
+          'X-RapidAPI-Key': RAPIDAPI_KEY,
+          'X-RapidAPI-Host': RAPIDAPI_HOST,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const data = await response.json();
+      
+      if (Array.isArray(data)) {
+        return data.map(district => typeof district === 'string' ? district : district.name || district.district);
+      }
+      
+      // Fallback to static districts
+      return this.getStaticDistricts(city);
+    } catch (error) {
+      console.error('Error fetching districts:', error);
+      return this.getStaticDistricts(city);
+    }
+  },
+
+  transformApiResponse(data: any, city?: string, district?: string): Pharmacy[] {
+    if (!data) return [];
+    
+    // API yanıtının farklı formatlarını destekle
+    let pharmacies = [];
+    
+    if (Array.isArray(data)) {
+      pharmacies = data;
+    } else if (data.pharmacies && Array.isArray(data.pharmacies)) {
+      pharmacies = data.pharmacies;
+    } else if (data.data && Array.isArray(data.data)) {
+      pharmacies = data.data;
+    } else if (data.results && Array.isArray(data.results)) {
+      pharmacies = data.results;
+    }
+
+    return pharmacies.map((pharmacy: any, index: number) => ({
+      id: pharmacy.id || `pharmacy-${index}`,
+      name: pharmacy.name || pharmacy.eczane_adi || pharmacy.pharmacyName || 'Bilinmeyen Eczane',
+      address: pharmacy.address || pharmacy.adres || pharmacy.full_address || 'Adres bilgisi yok',
+      phone: pharmacy.phone || pharmacy.telefon || pharmacy.tel || 'Telefon bilgisi yok',
+      district: pharmacy.district || pharmacy.ilce || district || 'Bilinmeyen İlçe',
+      city: pharmacy.city || pharmacy.il || city || 'Bilinmeyen Şehir',
+      latitude: pharmacy.latitude || pharmacy.lat || pharmacy.enlem || undefined,
+      longitude: pharmacy.longitude || pharmacy.lng || pharmacy.boylam || undefined
+    }));
+  },
+
+  getStaticCities(): string[] {
     return [
       'Adana', 'Adıyaman', 'Afyonkarahisar', 'Ağrı', 'Amasya', 'Ankara', 'Antalya', 'Artvin',
       'Aydın', 'Balıkesir', 'Bilecik', 'Bingöl', 'Bitlis', 'Bolu', 'Burdur', 'Bursa',
@@ -42,8 +190,7 @@ export const pharmacyService = {
     ];
   },
 
-  async getDistricts(city: string): Promise<string[]> {
-    // Return districts based on city
+  getStaticDistricts(city: string): string[] {
     const districtMap: Record<string, string[]> = {
       'İstanbul': [
         'Adalar', 'Arnavutköy', 'Ataşehir', 'Avcılar', 'Bağcılar', 'Bahçelievler', 'Bakırköy',
@@ -104,26 +251,6 @@ export const pharmacyService = {
           city: 'İstanbul',
           latitude: 40.9833,
           longitude: 29.0833
-        },
-        {
-          id: 'ist-4',
-          name: 'Boğaziçi Eczanesi',
-          address: 'Barbaros Bulvarı No:75 Beşiktaş/İstanbul',
-          phone: '0212 555 0404',
-          district: 'Beşiktaş',
-          city: 'İstanbul',
-          latitude: 41.0422,
-          longitude: 29.0094
-        },
-        {
-          id: 'ist-5',
-          name: 'Şişli Eczanesi',
-          address: 'Halaskargazi Cad. No:89 Şişli/İstanbul',
-          phone: '0212 555 0505',
-          district: 'Şişli',
-          city: 'İstanbul',
-          latitude: 41.0581,
-          longitude: 28.9833
         }
       ],
       'Ankara': [
@@ -146,92 +273,6 @@ export const pharmacyService = {
           city: 'Ankara',
           latitude: 39.9208,
           longitude: 32.8541
-        },
-        {
-          id: 'ank-3',
-          name: 'Ulus Eczanesi',
-          address: 'Ulus Meydanı No:8 Altındağ/Ankara',
-          phone: '0312 555 0303',
-          district: 'Altındağ',
-          city: 'Ankara',
-          latitude: 39.9453,
-          longitude: 32.8597
-        }
-      ],
-      'İzmir': [
-        {
-          id: 'izm-1',
-          name: 'Ege Eczanesi',
-          address: 'Kordon Boyu No:45 Konak/İzmir',
-          phone: '0232 555 0101',
-          district: 'Konak',
-          city: 'İzmir',
-          latitude: 38.4192,
-          longitude: 27.1287
-        },
-        {
-          id: 'izm-2',
-          name: 'Alsancak Eczanesi',
-          address: 'Alsancak Cad. No:67 Konak/İzmir',
-          phone: '0232 555 0202',
-          district: 'Konak',
-          city: 'İzmir',
-          latitude: 38.4378,
-          longitude: 27.1524
-        },
-        {
-          id: 'izm-3',
-          name: 'Bornova Eczanesi',
-          address: 'Kazım Dirik Cad. No:123 Bornova/İzmir',
-          phone: '0232 555 0303',
-          district: 'Bornova',
-          city: 'İzmir',
-          latitude: 38.4697,
-          longitude: 27.2167
-        }
-      ],
-      'Bursa': [
-        {
-          id: 'bur-1',
-          name: 'Yeşil Eczanesi',
-          address: 'Atatürk Cad. No:34 Osmangazi/Bursa',
-          phone: '0224 555 0101',
-          district: 'Osmangazi',
-          city: 'Bursa',
-          latitude: 40.1826,
-          longitude: 29.0669
-        },
-        {
-          id: 'bur-2',
-          name: 'Nilüfer Eczanesi',
-          address: 'Nilüfer Cad. No:56 Nilüfer/Bursa',
-          phone: '0224 555 0202',
-          district: 'Nilüfer',
-          city: 'Bursa',
-          latitude: 40.2297,
-          longitude: 28.9864
-        }
-      ],
-      'Antalya': [
-        {
-          id: 'ant-1',
-          name: 'Akdeniz Eczanesi',
-          address: 'Cumhuriyet Cad. No:78 Muratpaşa/Antalya',
-          phone: '0242 555 0101',
-          district: 'Muratpaşa',
-          city: 'Antalya',
-          latitude: 36.8969,
-          longitude: 30.7133
-        },
-        {
-          id: 'ant-2',
-          name: 'Kaleiçi Eczanesi',
-          address: 'Kaleiçi Sok. No:23 Muratpaşa/Antalya',
-          phone: '0242 555 0202',
-          district: 'Muratpaşa',
-          city: 'Antalya',
-          latitude: 36.8841,
-          longitude: 30.7056
         }
       ]
     };
@@ -242,16 +283,6 @@ export const pharmacyService = {
         name: 'Merkez Eczanesi',
         address: `Atatürk Cad. No:15 ${city}`,
         phone: '0212 555 0101',
-        district: 'Merkez',
-        city: city,
-        latitude: 39.9334,
-        longitude: 32.8597
-      },
-      {
-        id: `${city.toLowerCase()}-2`,
-        name: 'Sağlık Eczanesi',
-        address: `Cumhuriyet Cad. No:42 ${city}`,
-        phone: '0212 555 0202',
         district: 'Merkez',
         city: city,
         latitude: 39.9334,

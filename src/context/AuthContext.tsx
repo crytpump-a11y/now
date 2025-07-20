@@ -413,7 +413,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           createdAt: data.created_at
         };
         setFamilyProfiles(prev => [...prev, newProfile]);
-        toast.success('Aile profili eklendi');
       } else {
         toast.error('Profil eklenirken hata oluştu');
       }

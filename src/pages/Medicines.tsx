@@ -24,7 +24,7 @@ const MedicineForm: React.FC<{
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.name || !formData.dosage || formData.times.length === 0) {
-      toast.error('Please fill in all required fields');
+      toast.error('Lütfen tüm gerekli alanları doldurun');
       return;
     }
     onSubmit(formData);

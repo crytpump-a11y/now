@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
+import { supabase } from '../lib/supabase';
 import { Users, MessageSquare, Trash2, Plus, Edit, Shield } from 'lucide-react';
 import { toast } from 'react-toastify';
 import { Advertisement } from '../types';
@@ -41,7 +42,6 @@ const Admin: React.FC = () => {
   }, []);
 
   const loadUsers = () => {
-    // Load users from Supabase
     const loadUsersFromSupabase = async () => {
       try {
         const { data, error } = await supabase
@@ -61,10 +61,33 @@ const Admin: React.FC = () => {
   };
 
   const loadAdvertisements = () => {
-    const storedAds = localStorage.getItem('medireminder_advertisements');
-    if (storedAds) {
-      setAdvertisements(JSON.parse(storedAds));
-    }
+    const loadAdsFromSupabase = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('advertisements')
+          .select('*')
+          .order('created_at', { ascending: false });
+        
+        if (!error && data) {
+          const ads = data.map((ad: any) => ({
+            id: ad.id,
+            title: ad.title,
+            content: ad.content,
+            imageUrl: ad.image_url,
+            targetUrl: ad.target_url,
+            position: ad.position,
+            isActive: ad.is_active,
+            endDate: ad.end_date,
+            createdAt: ad.created_at
+          }));
+          setAdvertisements(ads);
+        }
+      } catch (error) {
+        console.error('Error loading advertisements:', error);
+      }
+    };
+    
+    loadAdsFromSupabase();
   };
 
   const deleteUser = async (userId: string) => {
@@ -75,7 +98,14 @@ const Admin: React.FC = () => {
 
     if (window.confirm('Bu kullanıcıyı silmek istediğinizden emin misiniz?')) {
       try {
-        // Delete user from Supabase (this will cascade delete related data due to foreign key constraints)
+        // Delete user from auth and database
+        const { error: authError } = await supabase.auth.admin.deleteUser(userId);
+        
+        if (authError) {
+          console.error('Auth deletion error:', authError);
+          // Continue with database deletion even if auth deletion fails
+        }
+        
         const { error } = await supabase
           .from('users')
           .delete()
@@ -95,32 +125,60 @@ const Admin: React.FC = () => {
   };
 
   const handleAdSubmit = (adData: Omit<Advertisement, 'id' | 'createdAt'>) => {
-    // Validate end date
     if (adData.endDate && new Date(adData.endDate) <= new Date()) {
       toast.error('Bitiş tarihi gelecekte olmalıdır');
       return;
     }
 
-    if (editingAd) {
-      const updatedAds = advertisements.map(ad => 
-        ad.id === editingAd.id 
-          ? { ...ad, ...adData }
-          : ad
-      );
-      setAdvertisements(updatedAds);
-      localStorage.setItem('medireminder_advertisements', JSON.stringify(updatedAds));
-      toast.success('Reklam başarıyla güncellendi');
-    } else {
-      const newAd: Advertisement = {
-        ...adData,
-        id: Date.now().toString(),
-        createdAt: new Date().toISOString()
-      };
-      const updatedAds = [...advertisements, newAd];
-      setAdvertisements(updatedAds);
-      localStorage.setItem('medireminder_advertisements', JSON.stringify(updatedAds));
-      toast.success('Reklam başarıyla oluşturuldu');
-    }
+    const saveAdToSupabase = async () => {
+      try {
+        if (editingAd) {
+          const { error } = await supabase
+            .from('advertisements')
+            .update({
+              title: adData.title,
+              content: adData.content,
+              image_url: adData.imageUrl,
+              target_url: adData.targetUrl,
+              position: adData.position,
+              is_active: adData.isActive,
+              end_date: adData.endDate || null
+            })
+            .eq('id', editingAd.id);
+          
+          if (!error) {
+            toast.success('Reklam başarıyla güncellendi');
+            loadAdvertisements();
+          } else {
+            toast.error('Reklam güncellenirken hata oluştu');
+          }
+        } else {
+          const { error } = await supabase
+            .from('advertisements')
+            .insert({
+              title: adData.title,
+              content: adData.content,
+              image_url: adData.imageUrl,
+              target_url: adData.targetUrl,
+              position: adData.position,
+              is_active: adData.isActive,
+              end_date: adData.endDate || null
+            });
+          
+          if (!error) {
+            toast.success('Reklam başarıyla oluşturuldu');
+            loadAdvertisements();
+          } else {
+            toast.error('Reklam oluşturulurken hata oluştu');
+          }
+        }
+      } catch (error) {
+        console.error('Error saving advertisement:', error);
+        toast.error('Reklam kaydedilirken hata oluştu');
+      }
+    };
+    
+    saveAdToSupabase();
     
     setShowAdForm(false);
     setEditingAd(undefined);
@@ -128,10 +186,26 @@ const Admin: React.FC = () => {
 
   const deleteAd = (adId: string) => {
     if (window.confirm('Bu reklamı silmek istediğinizden emin misiniz?')) {
-      const updatedAds = advertisements.filter(ad => ad.id !== adId);
-      setAdvertisements(updatedAds);
-      localStorage.setItem('medireminder_advertisements', JSON.stringify(updatedAds));
-      toast.success('Reklam başarıyla silindi');
+      const deleteAdFromSupabase = async () => {
+        try {
+          const { error } = await supabase
+            .from('advertisements')
+            .delete()
+            .eq('id', adId);
+          
+          if (!error) {
+            toast.success('Reklam başarıyla silindi');
+            loadAdvertisements();
+          } else {
+            toast.error('Reklam silinirken hata oluştu');
+          }
+        } catch (error) {
+          console.error('Error deleting advertisement:', error);
+          toast.error('Reklam silinirken hata oluştu');
+        }
+      };
+      
+      deleteAdFromSupabase();
     }
   };
 

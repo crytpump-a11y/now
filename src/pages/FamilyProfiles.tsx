@@ -121,8 +121,36 @@ const FamilyProfiles: React.FC = () => {
 
   const handleSubmit = (data: any) => {
     if (editingProfile) {
-      // In a real app, you would have an update function
-      toast.info('Profil güncelleme özelliği yakında eklenecek');
+      const updateFamilyProfile = async () => {
+        try {
+          const { error } = await supabase
+            .from('family_profiles')
+            .update({
+              name: data.name,
+              relationship: data.relationship,
+              birth_date: data.birthDate,
+              is_active: data.isActive
+            })
+            .eq('id', editingProfile.id);
+          
+          if (!error) {
+            // Update local state
+            setFamilyProfiles(prev => prev.map(p => 
+              p.id === editingProfile.id 
+                ? { ...p, ...data }
+                : p
+            ));
+            toast.success('Aile profili başarıyla güncellendi');
+          } else {
+            toast.error('Profil güncellenirken hata oluştu');
+          }
+        } catch (error) {
+          console.error('Error updating family profile:', error);
+          toast.error('Profil güncellenirken hata oluştu');
+        }
+      };
+      
+      updateFamilyProfile();
     } else {
       addFamilyProfile(data);
       toast.success('Aile profili başarıyla eklendi');

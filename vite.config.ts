@@ -13,13 +13,13 @@ export default defineConfig({
     },
     headers: {
       'Content-Security-Policy': `
-        default-src 'self' https://kaovqtczflglzsnlnlld.supabase.co;
-        connect-src 'self' https://kaovqtczflglzsnlnlld.supabase.co wss://kaovqtczflglzsnlnlld.supabase.co;
-        script-src 'self' 'unsafe-inline' 'unsafe-eval' https://kaovqtczflglzsnlnlld.supabase.co;
-        style-src 'self' 'unsafe-inline' https://kaovqtczflglzsnlnlld.supabase.co;
-        img-src 'self' data: https://kaovqtczflglzsnlnlld.supabase.co;
-        font-src 'self' data: https://kaovqtczflglzsnlnlld.supabase.co;
-        frame-src 'self' https://kaovqtczflglzsnlnlld.supabase.co;
+        default-src 'self' https://kaovqtczflglzsnlnlld.supabase.co https://nobetci-eczaneler-api-turkiye.p.rapidapi.com;
+        connect-src 'self' https://kaovqtczflglzsnlnlld.supabase.co wss://kaovqtczflglzsnlnlld.supabase.co https://nobetci-eczaneler-api-turkiye.p.rapidapi.com;
+        script-src 'self' 'unsafe-inline' 'unsafe-eval' https://kaovqtczflglzsnlnlld.supabase.co https://nobetci-eczaneler-api-turkiye.p.rapidapi.com;
+        style-src 'self' 'unsafe-inline' https://kaovqtczflglzsnlnlld.supabase.co https://nobetci-eczaneler-api-turkiye.p.rapidapi.com;
+        img-src 'self' data: https://kaovqtczflglzsnlnlld.supabase.co https://nobetci-eczaneler-api-turkiye.p.rapidapi.com;
+        font-src 'self' data: https://kaovqtczflglzsnlnlld.supabase.co https://nobetci-eczaneler-api-turkiye.p.rapidapi.com;
+        frame-src 'self' https://kaovqtczflglzsnlnlld.supabase.co https://nobetci-eczaneler-api-turkiye.p.rapidapi.com;
         worker-src 'self' blob:;
         media-src 'self' data:;
         object-src 'none';

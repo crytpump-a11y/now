@@ -46,55 +46,7 @@ export class BarcodeService {
   }
 
   async getMedicineInfo(barcode: string): Promise<MedicineInfo | null> {
-    try {
-      // Try Google Search API for medicine information
-      const searchQuery = `${barcode} ilaç medicine drug`;
-      const response = await fetch(`https://www.googleapis.com/customsearch/v1?key=YOUR_API_KEY&cx=YOUR_SEARCH_ENGINE_ID&q=${encodeURIComponent(searchQuery)}`);
-      
-      if (response.ok) {
-        const data = await response.json();
-        
-        if (data.items && data.items.length > 0) {
-          const firstResult = data.items[0];
-          const title = firstResult.title;
-          const snippet = firstResult.snippet;
-          
-          // Extract medicine name from title/snippet
-          const medicineNameMatch = title.match(/([A-Za-zÇĞıİÖŞÜçğıöşü\s]+)\s*\d+\s*(mg|ml|gr)/i);
-          const medicineName = medicineNameMatch ? medicineNameMatch[1].trim() : title.split(' ').slice(0, 2).join(' ');
-          
-          return {
-            name: medicineName,
-            barcode: barcode,
-            manufacturer: this.extractManufacturer(snippet),
-            activeIngredient: this.extractActiveIngredient(snippet)
-          };
-        }
-      }
-    } catch (error) {
-      console.error('Google Search API error:', error);
-    }
-    
-    // Try alternative medicine database APIs
-    try {
-      const response = await fetch(`https://api.fda.gov/drug/label.json?search=openfda.upc:"${barcode}"`);
-      if (response.ok) {
-        const data = await response.json();
-        if (data.results && data.results.length > 0) {
-          const result = data.results[0];
-          return {
-            name: result.openfda?.brand_name?.[0] || result.openfda?.generic_name?.[0] || 'Bilinmeyen İlaç',
-            barcode: barcode,
-            manufacturer: result.openfda?.manufacturer_name?.[0],
-            activeIngredient: result.active_ingredient?.[0]
-          };
-        }
-      }
-    } catch (error) {
-      console.error('FDA API error:', error);
-    }
-
-    // Fallback to mock database
+    // Use mock database for now - external APIs require server-side implementation
     return this.getMockMedicineInfo(barcode);
   }
 

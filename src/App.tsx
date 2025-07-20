@@ -26,11 +26,6 @@ import Education from './pages/Education';
 import HealthAssistant from './pages/HealthAssistant';
 import VirtualDoctor from './pages/VirtualDoctor';
 
-// Import the new modules to ensure they're included in the build
-import './pages/Education';
-import './pages/HealthAssistant';
-import './pages/VirtualDoctor';
-
 function App() {
   return (
     <AuthProvider>

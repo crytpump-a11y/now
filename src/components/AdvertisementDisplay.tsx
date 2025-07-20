@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { supabase } from '../lib/supabase';
 import { Advertisement } from '../types';
 import { X } from 'lucide-react';
 
@@ -51,20 +52,38 @@ const AdvertisementDisplay: React.FC<AdvertisementDisplayProps> = ({ position, c
   }, []);
 
   const loadAdvertisements = () => {
-    const stored = localStorage.getItem('medireminder_advertisements');
-    if (stored) {
-      const allAds = JSON.parse(stored);
-      const now = new Date();
-      
-      // Filter active ads for this position that haven't expired
-      const activeAds = allAds.filter((ad: Advertisement) => {
-        if (!ad.isActive || ad.position !== position) return false;
-        if (ad.endDate && new Date(ad.endDate) <= now) return false;
-        return !dismissedAds.includes(ad.id);
-      });
-      
-      setAdvertisements(activeAds);
-    }
+    const loadAdsFromSupabase = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('advertisements')
+          .select('*')
+          .eq('position', position)
+          .eq('is_active', true)
+          .or(`end_date.is.null,end_date.gt.${new Date().toISOString()}`);
+        
+        if (!error && data) {
+          const ads = data.map((ad: any) => ({
+            id: ad.id,
+            title: ad.title,
+            content: ad.content,
+            imageUrl: ad.image_url,
+            targetUrl: ad.target_url,
+            position: ad.position,
+            isActive: ad.is_active,
+            endDate: ad.end_date,
+            createdAt: ad.created_at
+          }));
+          
+          // Filter out dismissed ads
+          const filteredAds = ads.filter((ad: Advertisement) => !dismissedAds.includes(ad.id));
+          setAdvertisements(filteredAds);
+        }
+      } catch (error) {
+        console.error('Error loading advertisements:', error);
+      }
+    };
+    
+    loadAdsFromSupabase();
   };
 
   const dismissAd = (adId: string) => {
