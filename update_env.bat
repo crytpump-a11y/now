@@ -1,0 +1,6 @@
+@echo off
+(
+echo VITE_SUPABASE_URL=https://kaovqtczflglzsnlnlld.supabase.co
+echo VITE_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imthb3ZxdGN6ZmxnbHpzbmxubGxkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Mzc0NTU5NzQsImV4cCI6MjA1MzAzMTk3NH0.Ej8Ej8Ej8Ej8Ej8Ej8Ej8Ej8Ej8Ej8Ej8Ej8Ej8Ej8
+) > .env
+echo .env file has been updated with Vite environment variables.

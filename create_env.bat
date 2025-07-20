@@ -1,0 +1,6 @@
+@echo off
+(
+echo NEXT_PUBLIC_SUPABASE_URL=https://kaovqtczflglzsnlnlld.supabase.co
+echo NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imthb3ZxdGN6ZmxnbHpzbmxubGxkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTMwMDA4MzAsImV4cCI6MjA2ODU3NjgzMH0.PCGrQH9qBFy75Njs8NRCOiD2XZN2LZXrHZIeJQQO-7s
+) > .env
+echo .env file has been created successfully.
